@@ -30,8 +30,14 @@
 
 ## 安装
 
+仓库地址：<https://github.com/mousewangyongliang/dsh-session-slime>
+
 ```
+# 从本地目录装
 dsh plugin --profile desktop add <this directory>
+
+# 或直接从 GitHub 装（需要能访问 github.com）
+dsh plugin --profile desktop add github:mousewangyongliang/dsh-session-slime
 ```
 
 它会把包挂进 `~/.dsh/profiles/desktop/node_modules`，并把 `dsh-session-slime` 追加进

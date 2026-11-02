@@ -3,11 +3,12 @@
   "version": "0.2.0",
   "description": "Colorful slimes in the DSH sidebar that act out each conversation's status (running / waiting for approval / done / idle).",
   "keywords": [
+    "dsh",
     "dsh-plugin",
     "deepseek-harness",
     "sidebar",
-    "theme",
-    "icons"
+    "slime",
+    "session"
   ],
   "license": "MIT",
   "type": "module",
@@ -44,5 +45,13 @@
     "@deepseek-ai/cordis": {
       "optional": true
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mousewangyongliang/dsh-session-slime.git"
+  },
+  "homepage": "https://github.com/mousewangyongliang/dsh-session-slime#readme",
+  "bugs": {
+    "url": "https://github.com/mousewangyongliang/dsh-session-slime/issues"
   }
 }
