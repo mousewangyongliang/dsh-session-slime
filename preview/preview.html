@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>dsh-session-slime · 状态动作预览</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; background: #f4f5f8; color: #1d2129; padding: 28px 32px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 22px; color: #6b7280; }
+  .wrap { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+  .panel { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(16,24,40,.08), 0 8px 24px rgba(16,24,40,.06); padding: 10px; width: 268px; }
+  .panel h2, .gallery h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #8a93a6; margin: 6px 8px 10px; }
+
+  /* minimal replica of the real row markup */
+  [data-row-key] { display: flex; align-items: center; height: 32px; padding: 0 8px; border-radius: 8px; }
+  [data-row-key].selected { background: #eef1f8; }
+  [data-row-key] > ._slot { width: 16px; height: 20px; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+  [data-row-key] > ._title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1d2129; font-size: 13px; margin: 0 6px 0 4px; }
+  [data-row-key] > ._time { flex: none; color: #9aa3b2; font-size: 11px; }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot[data-state="warning"] { background: #f6a21c; box-shadow: 0 0 0 3px rgba(246,162,28,.18); }
+  .dot[data-state="done"] { background: #2fbf5b; }
+  .dot[data-state="ongoing"] { width: 14px; height: 14px; background: none; }
+  .dot[data-state="ongoing"] circle { fill: none; stroke-width: 2.4; }
+  .dot[data-state="ongoing"] .track { stroke: #e3e7ef; }
+  .dot[data-state="ongoing"] .arc { stroke: #4a7bf7; stroke-linecap: round; stroke-dasharray: 20 60; }
+  .dot[data-state="ongoing"] { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .zoom { zoom: 2.2; }
+  .zoom [data-row-key] > ._title { font-size: 13px; }
+  .zoom .panel-inner { }
+  .gallery { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(16,24,40,.08), 0 8px 24px rgba(16,24,40,.06); padding: 8px 14px 18px; }
+  .cards { display: flex; gap: 18px; }
+  .card { width: 132px; text-align: center; }
+  .card .big { width: 96px; height: 96px; margin: 8px auto 6px; background-position: center; background-repeat: no-repeat; background-size: contain; transform-origin: 50% 92%; }
+  .card[data-dsh-slime-state="running"] .big { animation: dsh-slime-bob .62s ease-in-out infinite; }
+  .card[data-dsh-slime-state="approval"] .big { animation: dsh-slime-wiggle .78s ease-in-out infinite; }
+  .card[data-dsh-slime-state="done"] .big { animation: dsh-slime-pop .42s ease-out; }
+  .card[data-dsh-slime-state="idle"] .big { animation: dsh-slime-breathe 3.6s ease-in-out infinite; }
+  @keyframes dsh-slime-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes dsh-slime-wiggle { 0%,100% { transform: rotate(-2deg); } 30% { transform: rotate(-9deg); } 70% { transform: rotate(9deg); } }
+  @keyframes dsh-slime-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07,.94); } }
+  @keyframes dsh-slime-pop { 0% { transform: scale(.5); } 55% { transform: scale(1.16); } 100% { transform: scale(1); } }
+  .card .cap { font-size: 12px; color: #4b5563; }
+  .card .cap b { display: block; font-size: 13px; color: #1d2129; }
+  .legend { margin: 14px 8px 0; font-size: 12px; color: #8a93a6; }
+</style>
+</head>
+<body>
+  <h1>dsh-session-slime · 状态动作预览</h1>
+  <p class="sub">真实 client.js 注入的样式 + 哈希配色。左侧模拟 DSH 会话列表（每行带状态点），右侧四种状态的大图。</p>
+
+  <div class="wrap">
+    <div class="panel">
+      <h2>模拟会话列表</h2>
+      <div id="rows"></div>
+      <h2 style="margin-top:16px">放大 2.2×（四种状态）</h2>
+      <div id="rowsZoom" class="zoom"></div>
+    </div>
+
+    <div class="gallery">
+      <h2>状态 → 动作</h2>
+      <div class="cards" id="cards"></div>
+      <div class="legend">运行中：上下弹跳 + 速度线 ｜ 等待审批：摇晃 + 举手 + 感叹号 ｜ 已完成：亮相弹一下 + 星光 ｜ 无任务：闭眼睡觉 + 呼吸 + Zzz</div>
+    </div>
+  </div>
+
+  <script>
+    window.__ModuleLoader__ = {
+      load: function (mod) {
+        window.__dshSlimeModule = mod.factory(function () { throw new Error("no require in preview"); });
+      }
+    };
+  </script>
+  <script src="../client.js"></script>
+
+  <script>
+    var SESSIONS = [
+      { id: "preview-idle-1", title: "整理 workspace 里的 runs 目录", time: "昨天", state: "idle" },
+      { id: "preview-running-1", title: "每日 30 条视频自动化", time: "12:04", state: "ongoing" },
+      { id: "preview-approval-1", title: "把 9222 端口的 Chrome 接进来", time: "11:30", state: "warning" },
+      { id: "preview-done-1", title: "检查插件市场的索引配置", time: "10:52", state: "done" },
+      { id: "preview-idle-2", title: "研究 app.asar 的插件加载顺序", time: "周三", state: "idle" },
+      { id: "preview-running-2", title: "给模型加一段系统提示", time: "周二", state: "ongoing" },
+      { id: "preview-approval-2", title: "修复侧边栏拖拽排序", time: "10-28", state: "warning" },
+      { id: "preview-done-2", title: "把预览页截图存档", time: "10-27", state: "done" }
+    ];
+
+    var dots = {
+      ongoing: '<svg class="dot" data-state="ongoing" width="14" height="14" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9.5"/><circle class="arc" cx="12" cy="12" r="9.5"/></svg>',
+      warning: '<span class="dot" data-state="warning"></span>',
+      done: '<span class="dot" data-state="done"></span>',
+      idle: ""
+    };
+
+    var rows = document.getElementById("rows");
+    SESSIONS.forEach(function (s, i) {
+      var row = document.createElement("div");
+      row.setAttribute("data-row-key", "session:" + s.id);
+      if (i === 1) row.className = "selected";
+      row.innerHTML =
+        '<span class="_slot">' + (dots[s.state] || "") + '</span>' +
+        '<span class="_title">' + s.title + "</span>" +
+        '<span class="_time">' + s.time + "</span>";
+      rows.appendChild(row);
+    });
+
+    // zoom panel: first four sessions (one per state), same markup
+    var rowsZoom = document.getElementById("rowsZoom");
+    SESSIONS.slice(0, 4).forEach(function (s, i) {
+      var row = document.createElement("div");
+      row.setAttribute("data-row-key", "session:" + s.id + "-zoom");
+      row.innerHTML =
+        '<span class="_slot">' + (dots[s.state] || "") + '</span>' +
+        '<span class="_title">' + s.title + "</span>" +
+        '<span class="_time">' + s.time + "</span>";
+      rowsZoom.appendChild(row);
+    });
+
+    window.__dshSlimeModule.apply({});
+
+    // Big gallery: one card per mood, using the plugin's own SVG generator.
+    var api = window.__DSH_SLIME_PREVIEW__;
+    var cards = document.getElementById("cards");
+    [
+      { state: "running", label: "运行中", note: "正在干活" },
+      { state: "approval", label: "等待审批", note: "等你点一下" },
+      { state: "done", label: "任务完成", note: "收工" },
+      { state: "idle", label: "无任务", note: "打个盹" }
+    ].forEach(function (item, i) {
+      var card = document.createElement("div");
+      card.className = "card";
+      card.setAttribute("data-dsh-slime-state", item.state);
+      var big = document.createElement("div");
+      big.className = "big";
+      big.style.backgroundImage = "url(\"" + api.iconUri("gallery-" + i, item.state, i % 3) + "\")";
+      var cap = document.createElement("div");
+      cap.className = "cap";
+      cap.innerHTML = "<b>" + item.label + "</b>" + item.note;
+      card.appendChild(big);
+      card.appendChild(cap);
+      cards.appendChild(card);
+    });
+  </script>
+</body>
+</html>

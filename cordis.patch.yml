@@ -1,0 +1,9 @@
+# dsh-session-slime bundle patch
+#
+# A single loader row. The row's specifier must resolve to the PACKAGE ROOT:
+# the host's client-module scan reads the package's `dsh.client` declaration
+# from it, which is what ships client.js to the browser. A subpath row would be
+# skipped and the decoration would never load.
+- insert:
+    - id: session-slime
+      name: 'dsh-session-slime'
